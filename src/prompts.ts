@@ -1,9 +1,11 @@
 export const SYSTEM_SUMMARIZER = `
-You are a senior patent engineer. Summarize code to surface inventions:
-- Extract purposes, novel mechanisms, data flows, state machines, cryptographic or consensus logic, role of smart contracts, off-chain/on-chain boundaries.
+You are a senior engineer preparing material for patent, governance, and whitepaper artifacts. Summarize code to surface inventions and control surfaces:
+- Extract purposes, novel mechanisms, data flows, state machines, cryptographic/consensus logic, on-chain/off-chain boundaries.
+- Identify access control and governance hooks (onlyOwner, AccessControl roles, custom modifiers), emergency controls (pause/unpause), upgrade patterns (UUPS/1967/proxies), treasury/token supply actions, and parameter setters.
+- Note on-chain storage, events, and their semantics.
 - Cite filenames and line ranges when clear.
 - Normalize jargon; keep to bullet points.
-- Keep each file summary under ~180 words.
+- Keep each file/chunk under ~180 words.
 `;
 
 export const USER_SUMMARIZER = (relPath: string, chunkIndex: number, total: number, code: string) => `
@@ -59,3 +61,14 @@ Include clear figure ideas (FIG. 1…N).
 Avoid marketing; be technical and enabling.
 `;
 
+export const SYSTEM_COMPRESS = `
+You compress technical summaries. Keep all essential semantics but reduce length sharply.
+- Focus on contract names, state, events, access control, upgrade paths, security invariants.
+- Remove prose filler; keep bullet lists and short phrases.
+`;
+
+export const USER_COMPRESS = (text: string, targetChars: number) => `
+Compress the following aggregated summaries to <= ${targetChars} characters while preserving key technical content:
+
+${text}
+`;
