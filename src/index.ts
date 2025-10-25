@@ -19,6 +19,12 @@ async function compressSummaries(
   retries: number,
   intermediateMult: number = 2.5
 ): Promise<string> {
+  if (targetChars <= 0) {
+    console.log(`⚠️  Compression disabled (--compress-target 0). Using uncompressed summaries (${combinedSummaries.length} chars).`);
+    console.log(`⚠️  Warning: Large inputs may exceed your model's context window. Consider using a model with larger context.`);
+    return combinedSummaries;
+  }
+  
   const LARGE_THRESHOLD = 120_000;
   const CHUNK_SIZE = 40_000;
   
@@ -98,6 +104,13 @@ program
     const doPatent = selectedAny ? !!opts.patent : true;
     const doAragon = selectedAny ? !!opts.aragon : true;
     const doWhitepaper = selectedAny ? !!opts.whitepaper : true;
+
+    if (opts.maxChars <= 0) {
+      console.log(`⚠️  Chunking disabled (--max-chars 0). Files will not be split for summarization.`);
+    }
+    if (opts.compressTarget <= 0) {
+      console.log(`⚠️  Running in expansive mode. This preserves maximum detail but may exceed context limits.\n`);
+    }
 
     const perFileSummaries: string[] = [];
     for (const f of files) {

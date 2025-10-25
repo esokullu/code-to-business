@@ -55,7 +55,7 @@ export async function readProjectFiles(
 }
 
 export function chunkText(text: string, maxChars = 4000): string[] {
-  if (text.length <= maxChars) return [text];
+  if (maxChars <= 0 || text.length <= maxChars) return [text];
   const chunks: string[] = [];
   let i = 0;
   while (i < text.length) {

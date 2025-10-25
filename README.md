@@ -33,8 +33,8 @@ Entry point: `node dist/index.js <folder> [options]`
 
 - `--include <glob...>` Extra globs to include in scan (adds to default patterns)
 - `--exclude <glob...>` Globs to exclude from scan (e.g., `web/**` `app/**`)
-- `--max-chars <n>` Max characters per chunk for summarization (default: 4000)
-- `--compress-target <n>` Target characters for compressed aggregated summaries (default: 8000)
+- `--max-chars <n>` Max characters per chunk for summarization (default: 4000, set to 0 to disable chunking)
+- `--compress-target <n>` Target characters for compressed aggregated summaries (default: 8000, set to 0 to disable compression)
 - `--compress-intermediate-mult <n>` Intermediate multiplier for two-pass compression (default: 2.5, higher = less aggressive, range: 1.5-4.0)
 - `--request-timeout <ms>` Request timeout in milliseconds for long operations (default: 900000 / 15 minutes)
 - `--retries <n>` Number of retries for long operations (default: 5)
@@ -90,6 +90,23 @@ node dist/index.js ../your-project --whitepaper --whitepaper-out whitepaper.md
 
 All heavy code analysis happens once; synthesis prompts reuse the same compressed context.
 
+## Expansive Mode (Maximum Detail Preservation)
+
+For maximum detail preservation without compression limits:
+
+```bash
+node dist/index.js ../your-project \
+  --max-chars 0 \
+  --compress-target 0 \
+  --request-timeout 1800000
+```
+
+This disables both chunking and compression, preserving all details. However:
+- Your model must have a large enough context window (16k-32k+ tokens recommended)
+- Generation may take significantly longer
+- You may need to increase `--request-timeout` to 30+ minutes
+- Consider using a model with larger context capacity in LM Studio
+
 ## Tips & Troubleshooting
 
 - If you encounter "server went away" or timeout errors:
@@ -102,7 +119,13 @@ All heavy code analysis happens once; synthesis prompts reuse the same compresse
 - If compression feels too aggressive (losing important details):
   - Increase `--compress-target` (e.g., 15000 or 20000) for more detail
   - Increase `--compress-intermediate-mult` (e.g., 3.0 or 3.5) to preserve more structure in pass 1
+  - For maximum detail, use expansive mode: `--max-chars 0 --compress-target 0`
   - Example: For 223k chars → 10k target, default 2.5x multiplier gives ~25k intermediate (9x compression in pass 1, then 2.5x in pass 2)
+- Context window considerations:
+  - Most local models have 4k-8k token contexts; some have 16k-32k+
+  - Roughly, 1 token ≈ 4 characters
+  - A 20k char compressed context ≈ 5k tokens (fits in 8k context with room for output)
+  - Expansive mode with large codebases requires 16k-32k+ context models
 - Large first request after model load can be slow; try a smaller request first.
 - Ensure `--base` points to a reachable LM Studio server.
 
