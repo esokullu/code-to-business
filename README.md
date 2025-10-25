@@ -35,6 +35,7 @@ Entry point: `node dist/index.js <folder> [options]`
 - `--exclude <glob...>` Globs to exclude from scan (e.g., `web/**` `app/**`)
 - `--max-chars <n>` Max characters per chunk for summarization (default: 4000)
 - `--compress-target <n>` Target characters for compressed aggregated summaries (default: 8000)
+- `--compress-intermediate-mult <n>` Intermediate multiplier for two-pass compression (default: 2.5, higher = less aggressive, range: 1.5-4.0)
 - `--request-timeout <ms>` Request timeout in milliseconds for long operations (default: 900000 / 15 minutes)
 - `--retries <n>` Number of retries for long operations (default: 5)
 - `--title <text>` Override project title used in outputs
@@ -98,6 +99,10 @@ All heavy code analysis happens once; synthesis prompts reuse the same compresse
   - Lower `--max-chars` (e.g., 2200 or 1600)
   - Adjust `--compress-target` lower (e.g., 6000)
 - For very large codebases (>120k chars of summaries), the tool automatically uses two-pass compression to avoid timeouts
+- If compression feels too aggressive (losing important details):
+  - Increase `--compress-target` (e.g., 15000 or 20000) for more detail
+  - Increase `--compress-intermediate-mult` (e.g., 3.0 or 3.5) to preserve more structure in pass 1
+  - Example: For 223k chars → 10k target, default 2.5x multiplier gives ~25k intermediate (9x compression in pass 1, then 2.5x in pass 2)
 - Large first request after model load can be slow; try a smaller request first.
 - Ensure `--base` points to a reachable LM Studio server.
 
