@@ -16,10 +16,17 @@ async function compressSummaries(
   baseUrl: string,
   model: string,
   requestTimeoutMs: number,
-  retries: number
+  retries: number,
+  intermediateMult: number = 2.5
 ): Promise<string> {
-  const LARGE_THRESHOLD = 120_000; // chars
-  const CHUNK_SIZE = 40_000; // chars per chunk for first pass
+  if (targetChars <= 0) {
+    console.log(`⚠️  Compression disabled (--compress-target 0). Using uncompressed summaries (${combinedSummaries.length} chars).`);
+    console.log(`⚠️  Warning: Large inputs may exceed your model's context window. Consider using a model with larger context.`);
+    return combinedSummaries;
+  }
+  
+  const LARGE_THRESHOLD = 120_000;
+  const CHUNK_SIZE = 40_000;
   
   if (combinedSummaries.length <= LARGE_THRESHOLD) {
     console.log(`Starting compression (${combinedSummaries.length} chars -> target ${targetChars} chars)...`);
@@ -34,9 +41,10 @@ async function compressSummaries(
   
   console.log(`Starting two-pass compression (${combinedSummaries.length} chars -> target ${targetChars} chars)...`);
   const chunks = chunkText(combinedSummaries, CHUNK_SIZE);
-  const intermediateTarget = Math.floor(targetChars / chunks.length) * 1.5; // generous intermediate target
+  const intermediateTarget = Math.floor(targetChars / chunks.length) * intermediateMult;
+  const estimatedIntermediate = intermediateTarget * chunks.length;
   
-  console.log(`  Pass 1: Compressing ${chunks.length} chunks...`);
+  console.log(`  Pass 1: Compressing ${chunks.length} chunks (intermediate target: ~${estimatedIntermediate} chars, multiplier: ${intermediateMult})...`);
   const compressedChunks: string[] = [];
   for (let i = 0; i < chunks.length; i++) {
     const compressed = await chatCompletion(
@@ -47,10 +55,11 @@ async function compressSummaries(
       { baseUrl, model, temperature: 0.1, maxTokens: 2048, requestTimeoutMs, retries }
     );
     compressedChunks.push(compressed.trim());
-    console.log(`    Chunk ${i + 1}/${chunks.length} compressed`);
+    console.log(`    Chunk ${i + 1}/${chunks.length} compressed (${chunks[i].length} -> ${compressed.trim().length} chars)`);
   }
   
   const intermediate = compressedChunks.join("\n\n");
+  console.log(`  Pass 1 complete: ${combinedSummaries.length} -> ${intermediate.length} chars`);
   console.log(`  Pass 2: Final compression (${intermediate.length} chars -> ${targetChars} chars)...`);
   return await chatCompletion(
     [
@@ -75,6 +84,7 @@ program
   .option("--base <url>", "LM Studio base URL", process.env.LMSTUDIO_BASE_URL || "http://127.0.0.1:1234")
   .option("--max-chars <n>", "Max chars per chunk for summarization", (v) => parseInt(v, 10), 4000)
   .option("--compress-target <n>", "Target max characters for compressed summaries", (v) => parseInt(v, 10), 8000)
+  .option("--compress-intermediate-mult <n>", "Intermediate multiplier for two-pass compression (higher = less aggressive)", (v) => parseFloat(v), 2.5)
   .option("--include <glob...>", "Additional file globs to include")
   .option("--exclude <glob...>", "Globs to exclude from scan")
   .option("--request-timeout <ms>", "Request timeout in milliseconds for long operations", (v) => parseInt(v, 10), 900_000)
@@ -94,6 +104,13 @@ program
     const doPatent = selectedAny ? !!opts.patent : true;
     const doAragon = selectedAny ? !!opts.aragon : true;
     const doWhitepaper = selectedAny ? !!opts.whitepaper : true;
+
+    if (opts.maxChars <= 0) {
+      console.log(`⚠️  Chunking disabled (--max-chars 0). Files will not be split for summarization.`);
+    }
+    if (opts.compressTarget <= 0) {
+      console.log(`⚠️  Running in expansive mode. This preserves maximum detail but may exceed context limits.\n`);
+    }
 
     const perFileSummaries: string[] = [];
     for (const f of files) {
@@ -124,7 +141,8 @@ program
       opts.base,
       opts.model,
       opts.requestTimeout,
-      opts.retries
+      opts.retries,
+      opts.compressIntermediateMult
     );
     console.log(`✅ Compression complete (${compressedSummaries.length} chars)\n`);
 
