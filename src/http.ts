@@ -6,7 +6,7 @@ import { Agent, setGlobalDispatcher } from "undici";
 const agent = new Agent({
   keepAliveTimeout: 10_000,
   keepAliveMaxTimeout: 60_000,
-  headersTimeout: 300_000, // 5 minutes
+  headersTimeout: 1_800_000, // 30 minutes
   bodyTimeout: 0
 });
 

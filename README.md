@@ -31,9 +31,12 @@ Entry point: `node dist/index.js <folder> [options]`
 - `--aragon-out <file>` Output file for governance (default: `aragon_governance_report.md`)
 - `--whitepaper-out <file>` Output file for whitepaper (default: `whitepaper.md`)
 
-- `--include <glob...>` Extra globs to include in scan (default scans repo broadly)
+- `--include <glob...>` Extra globs to include in scan (adds to default patterns)
+- `--exclude <glob...>` Globs to exclude from scan (e.g., `web/**` `app/**`)
 - `--max-chars <n>` Max characters per chunk for summarization (default: 4000)
 - `--compress-target <n>` Target characters for compressed aggregated summaries (default: 8000)
+- `--request-timeout <ms>` Request timeout in milliseconds for long operations (default: 900000 / 15 minutes)
+- `--retries <n>` Number of retries for long operations (default: 5)
 - `--title <text>` Override project title used in outputs
 - `--note <text>` High-level author note (included in prompts)
 - `--model <name>` LM Studio model id (default from env `LMSTUDIO_MODEL` or `local-model`)
@@ -67,7 +70,7 @@ Patent + Aragon, exclude large frontend:
 ```bash
 node dist/index.js ../../Documents/miras \
   --patent --aragon \
-  --include "contracts/**/*.sol" "foundry.toml" "hardhat.config.*"
+  --exclude "web/**" "app/**" "frontend/**"
 ```
 
 Whitepaper only:
@@ -88,10 +91,13 @@ All heavy code analysis happens once; synthesis prompts reuse the same compresse
 
 ## Tips & Troubleshooting
 
-- If the final synthesis stalls or errors:
+- If you encounter "server went away" or timeout errors:
+  - Increase `--request-timeout` (e.g., 1800000 for 30 minutes)
+  - Increase `--retries` (e.g., 8)
+  - Use `--exclude` to skip large directories (e.g., `--exclude "web/**" "node_modules/**"`)
   - Lower `--max-chars` (e.g., 2200 or 1600)
-  - Narrow with `--include` (e.g., `contracts/**/*.sol`)
   - Adjust `--compress-target` lower (e.g., 6000)
+- For very large codebases (>120k chars of summaries), the tool automatically uses two-pass compression to avoid timeouts
 - Large first request after model load can be slow; try a smaller request first.
 - Ensure `--base` points to a reachable LM Studio server.
 

@@ -33,9 +33,14 @@ const IGNORE = [
   "**/pnpm-lock.yaml"
 ];
 
-export async function readProjectFiles(root: string, extraPatterns: string[] = []): Promise<FileBlob[]> {
-  const patterns = extraPatterns.length ? extraPatterns : DEFAULT_PATTERNS;
-  const entries = await fg(patterns, { cwd: root, ignore: IGNORE, dot: false });
+export async function readProjectFiles(
+  root: string,
+  extraPatterns: string[] = [],
+  excludePatterns: string[] = []
+): Promise<FileBlob[]> {
+  const patterns = DEFAULT_PATTERNS.concat(extraPatterns || []);
+  const ignore = IGNORE.concat(excludePatterns || []);
+  const entries = await fg(patterns, { cwd: root, ignore, dot: false });
   const files: FileBlob[] = [];
   for (const rel of entries) {
     const p = path.join(root, rel);
